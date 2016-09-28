@@ -1,0 +1,14 @@
+language: go
+go:
+    - 1.7
+    - tip
+env:
+  - GOPKG_PARENT=$HOME/gopath/src/github.com/kubernetes-incubator GOPKG_PATH=$GOPKG_PARENT/rktlet
+
+before_install:
+  - '[ ! -d "${GOPKG_PARENT}" ] && mkdir -p "${GOPKG_PARENT}"'
+  - '[ ! -e "${GOPKG_PATH}" ] && ln -s "${TRAVIS_BUILD_DIR}" "${GOPKG_PATH}"'
+script:
+  - cd "$GOPKG_PATH"
+  - make test
+  - make
