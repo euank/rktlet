@@ -134,7 +134,7 @@ func (c *cli) RunCommand(subcmd string, args ...string) ([]string, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		glog.Warningf("rkt: cmd %v %v errored with %v", subcmd, args, err)
+		glog.Warningf("rkt: cmd %v %v errored with %v\noutput: %s", subcmd, args, err, out)
 		return nil, fmt.Errorf("failed to run %v %v: %v\noutput: %s", subcmd, args, err, out)
 	}
 

@@ -42,14 +42,7 @@ func (s *systemd) StartProcess(cgroupParent, command string, args ...string) (id
 
 	cmdList := []string{s.systemdRunPath, "--unit=" + unitName}
 	if cgroupParent != "" {
-		// The cgroup parent must have a suffix of .slice.
-		// If cgroupParent doesn't exist in some of the subsystems,
-		// it will be created (e.g. systemd, memeory, cpu). Otherwise
-		// the process will be put inside them.
-		//
-		// TODO(yifan): Verify that this works with the upstream QoS
-		// imeplementation for systemd based nodes.
-		cmdList = append(cmdList, "--slice="+cgroupParent)
+		cmdList = append(cmdList, "--slice="+sanitizeCgroupSlice(cgroupParent))
 	}
 	cmdList = append(cmdList, command)
 	cmdList = append(cmdList, args...)
@@ -63,4 +56,8 @@ func (s *systemd) StartProcess(cgroupParent, command string, args ...string) (id
 		return "", fmt.Errorf("failed to run systemd-run %v %v: %v\noutput: %s", command, args, err, out)
 	}
 	return unitName, nil
+}
+
+func sanitizeCgroupSlice(slice string) string {
+	return strings.TrimLeft(slice, "/")
 }
