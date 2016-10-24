@@ -31,4 +31,5 @@ import:
   - lib
 - package: github.com/appc/spec
   version: cri
+  repo: https://github.com/euank/spec
 - package: github.com/docker/docker/daemon/caps
