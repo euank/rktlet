@@ -1,5 +1,5 @@
-hash: faaed33ee50d15d0d1103b52fd8aab6cb32d5524c70e8dc122a6f3f9f10873c9
-updated: 2016-10-24T15:36:01.926102654-07:00
+hash: e4e3927585e36b10427961c71c5593b5f699c7ce318e53a4dd6cf7dc4c8eaebd
+updated: 2016-10-24T16:48:35.123999285-07:00
 imports:
 - name: github.com/appc/spec
   version: c2cdcfe74b51fca9656b06b80ec7991531f50665
@@ -22,7 +22,8 @@ imports:
   subpackages:
   - semver
 - name: github.com/coreos/rkt
-  version: ee8625a0edbb3befb317742e30e4dd6aeef6423d
+  version: c4a692661080c7b6a0369e84ffd74b31d74413eb
+  repo: https://github.com/euank/rkt
   subpackages:
   - common
   - lib

@@ -26,7 +26,8 @@ import:
   - assert
   - mock
 - package: github.com/coreos/rkt
-  version: cri
+  version: euank-cri-k8s
+  repo: https://github.com/euank/rkt
   subpackages:
   - lib
 - package: github.com/appc/spec
