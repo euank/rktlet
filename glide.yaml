@@ -1,12 +1,14 @@
 package: github.com/kubernetes-incubator/rktlet
 import:
 - package: k8s.io/kubernetes
-  version: 0fdca3be196f121344718d07dfb267665d06ffec
+  version: streamlib2
+  repo: https://github.com/timstclair/kubernetes
   subpackages:
   - pkg/kubelet/api/v1alpha1/runtime
   - pkg/kubelet/container
   - pkg/api/resource
   - pkg/util/exec
+  - pkg/kubelet/server/streaming
 - package: golang.org/x/net
   version: e90d6d0afc4c315a0d87a568ae68577cc15149a0
   subpackages:
