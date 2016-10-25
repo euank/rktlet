@@ -1,10 +1,11 @@
 package: github.com/kubernetes-incubator/rktlet
 import:
 - package: k8s.io/kubernetes
-  version: 230fe1aeab7588fd375581a4dbec4b8d72006122
+  version: 0fdca3be196f121344718d07dfb267665d06ffec
   subpackages:
   - pkg/kubelet/api/v1alpha1/runtime
   - pkg/kubelet/container
+  - pkg/api/resource
   - pkg/util/exec
 - package: golang.org/x/net
   version: e90d6d0afc4c315a0d87a568ae68577cc15149a0
