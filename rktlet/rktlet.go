@@ -42,18 +42,23 @@ func New() (ContainerAndImageService, error) {
 	execer := exec.New()
 	rktPath, err := execer.LookPath("rkt")
 	if err != nil {
-		return fmt.Errorf("must have rkt installed: %v", err)
+		return nil, fmt.Errorf("must have rkt installed: %v", err)
 	}
 
 	systemdRunPath, err := execer.LookPath("systemd-run")
 	if err != nil {
-		return fmt.Errorf("must have systemd-run installed: %v", err)
+		return nil, fmt.Errorf("must have systemd-run installed: %v", err)
 	}
 
 	cli, init := cli.NewRktCLI(rktPath, execer, cli.CLIConfig{}), cli.NewSystemd(systemdRunPath, execer)
 
-	return combinedRuntimes{
-		RuntimeServiceServer: runtime.New(cli, init),
-		ImageServiceServer:   image.NewImageStore(image.ImageStoreConfig{CLI: cli}),
+	rktRuntime, err := runtime.New(cli, init)
+	if err != nil {
+		return nil, err
 	}
+
+	return combinedRuntimes{
+		RuntimeServiceServer: rktRuntime,
+		ImageServiceServer:   image.NewImageStore(image.ImageStoreConfig{CLI: cli}),
+	}, nil
 }

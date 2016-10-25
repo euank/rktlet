@@ -17,21 +17,79 @@ limitations under the License.
 package runtime
 
 import (
+	"bytes"
+	"errors"
 	"io"
+	"io/ioutil"
 	"os/exec"
 
-	"github.com/golang/glog"
-	runtimeApi "k8s.io/kubernetes/pkg/kubelet/api/v1alpha1/runtime"
+	"github.com/kubernetes-incubator/rktlet/rktlet/cli"
+	"golang.org/x/net/context"
+
+	runtimeapi "k8s.io/kubernetes/pkg/kubelet/api/v1alpha1/runtime"
+	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
+	"k8s.io/kubernetes/pkg/util/term"
 )
 
-func (r *RktRuntime) Exec(execService runtimeApi.RuntimeService_ExecServer) error {
-	// Read the 1st request, which contains container ID, commands, stdin.
-	req, err := execService.Recv()
+func (r *RktRuntime) Attach(ctx context.Context, req *runtimeapi.AttachRequest) (*runtimeapi.AttachResponse, error) {
+	// TODO, the second argument is `tty` and should be determined somehow????
+	return r.streamServer.GetAttach(req, true)
+}
+
+func (r *RktRuntime) Exec(ctx context.Context, req *runtimeapi.ExecRequest) (*runtimeapi.ExecResponse, error) {
+	return r.streamServer.GetExec(req)
+}
+
+type nopWriteCloser bytes.Buffer
+
+func (n nopWriteCloser) Bytes() []byte {
+	return n.Bytes()
+}
+
+func (n nopWriteCloser) Write(p []byte) (int, error) {
+	return n.Write(p)
+}
+
+func (nopWriteCloser) Close() error {
+	return nil
+}
+
+func (r *RktRuntime) ExecSync(ctx context.Context, req *runtimeapi.ExecSyncRequest) (*runtimeapi.ExecSyncResponse, error) {
+	nopStdin := ioutil.NopCloser(bytes.NewReader([]byte{}))
+	var stdout, stderr nopWriteCloser
+	err := r.execShim.Exec(req.GetContainerId(), req.GetCmd(), nopStdin, stdout, stderr, false, make(chan term.Size))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	uuid, appName, err := parseContainerID(*req.ContainerId)
+	var exitCode int32 = 0 // TODO
+	return &runtimeapi.ExecSyncResponse{
+		ExitCode: &exitCode,
+		Stderr:   stderr.Bytes(),
+		Stdout:   stdout.Bytes(),
+	}, nil
+}
+
+func (r *RktRuntime) PortForward(ctx context.Context, req *runtimeapi.PortForwardRequest) (*runtimeapi.PortForwardResponse, error) {
+	return r.streamServer.GetPortForward(req)
+}
+
+type execShim struct {
+	cli cli.CLI
+}
+
+var _ streaming.Runtime = &execShim{}
+
+func NewExecShim(cli cli.CLI) *execShim {
+	return &execShim{cli: cli}
+}
+
+func (es *execShim) Attach(containerID string, in io.Reader, out, err io.WriteCloser, resize <-chan term.Size) error {
+	return errors.New("TODO")
+}
+
+func (es *execShim) Exec(containerID string, cmd []string, in io.Reader, out, errOut io.WriteCloser, tty bool, resize <-chan term.Size) error {
+	uuid, appName, err := parseContainerID(containerID)
 	if err != nil {
 		return err
 	}
@@ -41,18 +99,18 @@ func (r *RktRuntime) Exec(execService runtimeApi.RuntimeService_ExecServer) erro
 	// so we have to use the "Cmd" under "os/exec" package.
 	// TODO(yifan): Patch upstream to include SetStderr() in the interface.
 	cmdList := []string{"app", "exec", "--app=" + appName, uuid}
-	cmdList = append(cmdList, req.Cmd...)
-	rktCommand := r.Command(cmdList[0], cmdList[1:]...)
-	cmd := exec.Command(rktCommand[0], rktCommand[1:]...)
+	cmdList = append(cmdList, cmd...)
+	rktCommand := es.cli.Command(cmdList[0], cmdList[1:]...)
+	execCmd := exec.Command(rktCommand[0], rktCommand[1:]...)
 
 	// At most one error will happen in each of the following goroutines.
 	errCh := make(chan error, 4)
 	done := make(chan struct{})
 
-	go streamStdin(cmd, execService, errCh)
-	go streamStdout(cmd, execService, errCh)
-	go streamStderr(cmd, execService, errCh)
-	go run(cmd, errCh, done)
+	go streamStdin(execCmd, in, errCh)
+	go streamStdout(execCmd, out, errCh)
+	go streamStderr(execCmd, errOut, errCh)
+	go run(execCmd, errCh, done)
 
 	select {
 	case err := <-errCh:
@@ -62,84 +120,44 @@ func (r *RktRuntime) Exec(execService runtimeApi.RuntimeService_ExecServer) erro
 	}
 }
 
-func streamStdin(cmd *exec.Cmd, execService runtimeApi.RuntimeService_ExecServer, errCh chan error) {
+func (es *execShim) PortForward(sandboxID string, port int32, stream io.ReadWriteCloser) error {
+	return errors.New("TODO")
+}
+
+func streamStdin(cmd *exec.Cmd, in io.Reader, errCh chan error) {
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		errCh <- err
 		return
 	}
-
-	for {
-		req, err := execService.Recv()
-		if err != nil {
-			glog.Errorf("rkt: Error receiving request: %v", err)
-			errCh <- err
-			return
-		}
-
-		// Write wil return an error if it stops early before
-		// finishing writing.
-		if _, err := stdin.Write(req.Stdin); err != nil {
-			glog.Errorf("rkt: Error writing to stdin: %v", err)
-			errCh <- err
-			return
-		}
+	_, err = io.Copy(stdin, in)
+	if err != nil {
+		errCh <- err
 	}
 }
 
-func streamStdout(cmd *exec.Cmd, execService runtimeApi.RuntimeService_ExecServer, errCh chan error) {
+func streamStdout(cmd *exec.Cmd, out io.WriteCloser, errCh chan error) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		errCh <- err
 		return
 	}
-
-	b := make([]byte, 1024)
-
-	for {
-		n, err := stdout.Read(b)
-		if err == io.EOF {
-			return
-		}
-		if err != nil {
-			glog.Errorf("rkt: Error reading stdout: %v", err)
-			errCh <- err
-			return
-		}
-
-		if err := execService.Send(&runtimeApi.ExecResponse{Stdout: b[:n]}); err != nil {
-			glog.Errorf("rkt: Error sending exec response for stdout: %v", err)
-			errCh <- err
-			return
-		}
+	_, err = io.Copy(out, stdout)
+	if err != nil {
+		errCh <- err
 	}
 }
 
-func streamStderr(cmd *exec.Cmd, execService runtimeApi.RuntimeService_ExecServer, errCh chan error) {
+func streamStderr(cmd *exec.Cmd, out io.WriteCloser, errCh chan error) {
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		errCh <- err
 		return
 	}
 
-	b := make([]byte, 1024)
-
-	for {
-		n, err := stderr.Read(b)
-		if err == io.EOF {
-			return
-		}
-		if err != nil {
-			glog.Errorf("rkt: Error reading stdout: %v", err)
-			errCh <- err
-			return
-		}
-
-		if err := execService.Send(&runtimeApi.ExecResponse{Stderr: b[:n]}); err != nil {
-			glog.Errorf("rkt: Error sending exec response for stderr: %v", err)
-			errCh <- err
-			return
-		}
+	_, err = io.Copy(out, stderr)
+	if err != nil {
+		errCh <- err
 	}
 }
 
