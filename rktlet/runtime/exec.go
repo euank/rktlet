@@ -32,7 +32,8 @@ import (
 )
 
 func (r *RktRuntime) Attach(ctx context.Context, req *runtimeapi.AttachRequest) (*runtimeapi.AttachResponse, error) {
-	// TODO, the second argument is `tty` and should be determined somehow????
+	// TODO, the second parameter here needs to be retrieved from the
+	// `ContainerConfig` associated with the req.ContainerID
 	return r.streamServer.GetAttach(req, true)
 }
 
