@@ -33,3 +33,7 @@ import:
 - package: github.com/appc/spec
   version: cri
 - package: github.com/docker/docker/daemon/caps
+- package: github.com/coreos/go-systemd
+  version: v13
+  subpackages:
+    - sdjournal
