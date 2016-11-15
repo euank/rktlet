@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-TAG="0.0.1"
+TAG=0.0.1
 SOURCES := $(shell find ./journal2cri ./cmd -name '*.go')
 
 all: ./bin/journal2cri

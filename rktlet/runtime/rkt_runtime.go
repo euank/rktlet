@@ -82,7 +82,7 @@ func (r *RktRuntime) ContainerStatus(ctx context.Context, req *runtimeApi.Contai
 	return &runtimeApi.ContainerStatusResponse{Status: status}, nil
 }
 
-func (r *RktRuntime) CreateContainer(ctx context.Context, req *runtimeApi.CreateContainerRequest) (*runtimeApi.CreateContainerResponse, error) {
+func (r *RktRuntime) getImageHash(image string) (string, error) {
 	var imageID string
 
 	// Get the image hash.
@@ -94,7 +94,7 @@ func (r *RktRuntime) CreateContainer(ctx context.Context, req *runtimeApi.Create
 	}
 	resp, err := r.RunCommand("image", "fetch", "--store-only=true", "--full=true", "docker://"+imageName)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	for _, line := range resp {
 		if strings.HasPrefix(line, "sha512") {
@@ -102,9 +102,20 @@ func (r *RktRuntime) CreateContainer(ctx context.Context, req *runtimeApi.Create
 			break
 		}
 	}
-
 	if imageID == "" {
-		return nil, fmt.Errorf("failed to get image ID for image %q", imageName)
+		return "", fmt.Errorf("failed to get image ID for image %q", image)
+	}
+	return imageID, nil
+}
+
+func (r *RktRuntime) CreateContainer(ctx context.Context, req *runtimeApi.CreateContainerRequest) (*runtimeApi.CreateContainerResponse, error) {
+	var imageID string
+
+	imageName := *req.Config.Image.Image
+	imageID, err := r.getImageHash(imageName)
+
+	if err != nil {
+		return nil, err
 	}
 
 	command, err := generateAppAddCommand(req, imageID)

@@ -92,7 +92,12 @@ func (r *RktRuntime) RunPodSandbox(ctx context.Context, req *runtimeApi.RunPodSa
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	glog.Warningf("sandbox got a UUID but did not have a ready status after 10s: %v, %v", status, err)
+	if status.GetStatus().GetState() != runtimeApi.PodSandboxState_SANDBOX_READY {
+		glog.Warningf("sandbox got a UUID but did not have a ready status after 10s: %v, %v", status, err)
+	}
+
+	// Inject internal apps
+	err = r.addInternalLoggingApp(rktUUID, req.GetConfig().GetLogDirectory())
 
 	return &runtimeApi.RunPodSandboxResponse{PodSandboxId: &rktUUID}, err
 }
