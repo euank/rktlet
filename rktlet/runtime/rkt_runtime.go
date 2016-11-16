@@ -92,7 +92,7 @@ func (r *RktRuntime) getImageHash(image string) (string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to apply image tag: %v", err)
 	}
-	resp, err := r.RunCommand("image", "fetch", "--store-only=true", "--full=true", "docker://"+imageName)
+	resp, err := r.RunCommand("image", "fetch", "--store-only=true", "--full=true", image)
 	if err != nil {
 		return "", err
 	}
