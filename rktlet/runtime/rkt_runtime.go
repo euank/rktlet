@@ -30,6 +30,8 @@ import (
 	runtimeApi "k8s.io/kubernetes/pkg/kubelet/api/v1alpha1/runtime"
 )
 
+const internalSuffix = "-rktletinternal"
+
 type RktRuntime struct {
 	cli.CLI
 	cli.Init
@@ -179,6 +181,9 @@ func (r *RktRuntime) ListContainers(ctx context.Context, req *runtimeApi.ListCon
 	var containers []*runtimeApi.Container
 	for _, p := range pods {
 		for _, appName := range p.AppNames {
+			if strings.HasPrefix(appName, internalPrefix) {
+				continue
+			}
 			containerID := buildContainerID(p.UUID, appName)
 			resp, err := r.ContainerStatus(ctx, &runtimeApi.ContainerStatusRequest{
 				ContainerId: &containerID,

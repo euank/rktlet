@@ -37,6 +37,8 @@ const (
 	kubernetesReservedAnnoPodName      = "k8s.io/reserved/pod-name"
 	kubernetesReservedAnnoPodNamespace = "k8s.io/reserved/pod-namespace"
 	kubernetesReservedAnnoPodAttempt   = "k8s.io/reserved/pod-attempt"
+
+	internalPrefix = "rktletinternal-"
 )
 
 // List of reserved keys in the annotations.

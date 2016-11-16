@@ -8,7 +8,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 RUN mkdir -p /journal/ /cri/
 COPY ./bin/journal2cri /usr/bin/journal2cri
 
-VOLUME /journal
-VOLUME /cri
+# VOLUME /journal
+# VOLUME /cri
 
 CMD ["/usr/bin/journal2cri", "/journal", "/cri"]
