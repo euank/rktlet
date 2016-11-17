@@ -87,10 +87,8 @@ func (r *RktRuntime) ContainerStatus(ctx context.Context, req *runtimeApi.Contai
 func (r *RktRuntime) getImageHash(image string) (string, error) {
 	var imageID string
 
-	// Get the image hash.
-	imageName := *req.Config.Image.Image
 	var err error
-	imageName, err = util.ApplyDefaultImageTag(imageName)
+	imageName, err = util.ApplyDefaultImageTag(image)
 	if err != nil {
 		return nil, fmt.Errorf("unable to apply image tag: %v", err)
 	}
