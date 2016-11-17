@@ -246,7 +246,10 @@ func generateAppAddCommand(req *runtimeApi.CreateContainerRequest, imageID strin
 
 			// Add uid, addtional gids.
 			if uid := secContext.RunAsUser; uid != nil {
-				cmd = append(cmd, fmt.Sprintf("--user=%s", *uid))
+				cmd = append(cmd, fmt.Sprintf("--user=%d", *uid))
+			}
+			if uname := secContext.RunAsUsername; uname != nil {
+				cmd = append(cmd, fmt.Sprintf("--user=%s", *uname))
 			}
 
 			if addGids := secContext.GetSupplementalGroups(); len(addGids) > 0 {
