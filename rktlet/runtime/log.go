@@ -19,7 +19,6 @@ package runtime
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -37,15 +36,16 @@ func (r *RktRuntime) addInternalLoggingApp(rktUUID string, criLogDir string) err
 		return err
 	}
 
-	rktJournalDir := filepath.Join("/", "var", "log", "journal", strings.Replace(rktUUID, "-", "", -1))
+	rktJournalDir := "/var/log/journal/" + strings.Replace(rktUUID, "-", "", -1) + "/"
 
 	// TODO(euank): This is a HACK, kubelet should do this
-	os.MkdirAll(rktJournalDir, 0755)
+	os.MkdirAll(criLogDir, 0755)
 
 	cmd := []string{"app", "add", rktUUID, imageHash}
 
 	cmd = append(cmd, "--name="+loggingAppName)
 	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=journal,kind=host,source=%s,target=/journal,readOnly=true", rktJournalDir))
+	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=cri,kind=host,source=%s,target=/cri,readOnly=false", criLogDir))
 	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=cri,kind=host,source=%s,target=/cri,readOnly=false", criLogDir))
 
 	if _, err := r.RunCommand(cmd[0], cmd[1:]...); err != nil {

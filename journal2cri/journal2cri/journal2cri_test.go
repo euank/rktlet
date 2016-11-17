@@ -15,18 +15,18 @@ func TestProcessEntry(t *testing.T) {
 	timeInMillis := now.UnixNano() / 1000
 	successPairs := []struct {
 		In  sdjournal.JournalEntry
-		Out CRIEntry
+		Out *CRIEntry
 	}{
 		{
 			In: sdjournal.JournalEntry{
 				RealtimeTimestamp: uint64(timeInMillis),
 				Fields: map[string]string{
-					"SYSLOG_IDENTIFIER": "myapp-1",
+					"SYSLOG_IDENTIFIER": "1-myapp",
 					"_TRANSPORT":        "stdout",
 					"MESSAGE":           "20/20",
 				},
 			},
-			Out: CRIEntry{
+			Out: &CRIEntry{
 				AppName:    "myapp",
 				AppAttempt: 1,
 				Message:    "20/20",
@@ -38,12 +38,12 @@ func TestProcessEntry(t *testing.T) {
 			In: sdjournal.JournalEntry{
 				RealtimeTimestamp: uint64(timeInMillis),
 				Fields: map[string]string{
-					"SYSLOG_IDENTIFIER": "otherapp-10",
+					"SYSLOG_IDENTIFIER": "10-otherapp",
 					"_TRANSPORT":        "stderr",
 					"MESSAGE":           "petrov",
 				},
 			},
-			Out: CRIEntry{
+			Out: &CRIEntry{
 				AppName:    "otherapp",
 				AppAttempt: 10,
 				Message:    "petrov",
@@ -51,12 +51,27 @@ func TestProcessEntry(t *testing.T) {
 				Timestamp:  now,
 			},
 		},
+		{
+			In: sdjournal.JournalEntry{
+				RealtimeTimestamp: uint64(timeInMillis),
+				Fields: map[string]string{
+					"SYSLOG_IDENTIFIER": "rktletinternal-journal2cri",
+					"_TRANSPORT":        "stdout",
+					"MESSAGE":           "ghost",
+				},
+			},
+			Out: nil,
+		},
 	}
 
 	for i, pair := range successPairs {
-		t.Run(fmt.Sprintf("%d success with %s", i, pair.Out.AppName), func(t *testing.T) {
+		appName := "nil"
+		if pair.Out != nil {
+			appName = pair.Out.AppName
+		}
+		t.Run(fmt.Sprintf("%d success with %s", i, appName), func(t *testing.T) {
 			out := ProcessEntry(&pair.In)
-			assert.Equal(t, &pair.Out, out)
+			assert.Equal(t, pair.Out, out)
 		})
 	}
 

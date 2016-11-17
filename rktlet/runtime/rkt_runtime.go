@@ -88,9 +88,9 @@ func (r *RktRuntime) getImageHash(image string) (string, error) {
 	var imageID string
 
 	var err error
-	imageName, err = util.ApplyDefaultImageTag(image)
+	image, err = util.ApplyDefaultImageTag(image)
 	if err != nil {
-		return nil, fmt.Errorf("unable to apply image tag: %v", err)
+		return "", fmt.Errorf("unable to apply image tag: %v", err)
 	}
 	resp, err := r.RunCommand("image", "fetch", "--store-only=true", "--full=true", image)
 	if err != nil {

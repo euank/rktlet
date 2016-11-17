@@ -38,23 +38,29 @@ func ProcessEntry(entry *sdjournal.JournalEntry) *CRIEntry {
 	}
 
 	// App names have the special format of 'appname-instanceNumber' by convention
-	parts := strings.SplitAfterN(rktAppName, "-", 2)
+	parts := strings.SplitN(rktAppName, "-", 2)
 	if len(parts) != 2 {
 		return nil
 	}
 
-	appName := parts[0]
-	appNumberStr := parts[1]
+	appNumberStr := parts[0]
+	if appNumberStr == "rktletinternal" {
+		return nil
+	}
+	appName := parts[1]
 
 	appNumber, err := strconv.Atoi(appNumberStr)
 	if err != nil {
+		log.Printf("could not parse apps attempt: %v in %v, %v", appNumberStr, rktAppName, err)
 		return nil
 	}
-	appName = strings.TrimRight(appName, "-")
+	appName = strings.TrimLeft(appName, "-")
 	if len(appName) == 0 {
+		log.Printf("unexpected 0 length appName in %v", rktAppName)
 		return nil
 	}
 
+	// BUG(euank): this doesn't actually get set to stderr ever; journald does not distingish this how we use it
 	outStream := entry.Fields["_TRANSPORT"]
 	if outStream != string(CRIStreamStdout) && outStream != string(CRIStreamStderr) {
 		log.Printf("unrecognized out stream type: %v", outStream)
@@ -88,7 +94,7 @@ type CRIEntry struct {
 // WriteEntry writes a CRI entry to a file at the expected location
 // TODO we really should be holding onto file ptrs, this constant reopen/closing is not good
 func WriteEntry(entry *CRIEntry, dir string) {
-	fileName := fmt.Sprintf("%s_%d_%s.log", entry.AppName, entry.AppAttempt, entry.StreamType)
+	fileName := fmt.Sprintf("%s_%d.log", entry.AppName, entry.AppAttempt)
 	path := filepath.Join(dir, fileName)
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
