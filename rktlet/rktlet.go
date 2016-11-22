@@ -55,14 +55,16 @@ func New(config *Config) (ContainerAndImageService, error) {
 	})
 	init := cli.NewSystemd(systemdRunPath, execer)
 
-	rktRuntime, err := runtime.New(rktCli, init, config.StreamServerAddress)
+	imageService := image.NewImageStore(image.ImageStoreConfig{CLI: rktCli})
+
+	rktRuntime, err := runtime.New(rktCli, init, config.StreamServerAddress, imageService)
 	if err != nil {
 		return nil, err
 	}
 
 	return combinedRuntimes{
 		RuntimeServiceServer: rktRuntime,
-		ImageServiceServer:   image.NewImageStore(image.ImageStoreConfig{CLI: rktCli}),
+		ImageServiceServer:   imageService,
 	}, nil
 }
 

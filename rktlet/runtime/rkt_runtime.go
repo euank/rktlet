@@ -37,14 +37,16 @@ type RktRuntime struct {
 
 	execShim     *execShim
 	streamServer streaming.Server
+	imageStore   runtimeApi.ImageServiceServer
 }
 
 // New creates a new RuntimeServiceServer backed by rkt
-func New(cli cli.CLI, init cli.Init, streamServerAddr string) (runtimeApi.RuntimeServiceServer, error) {
+func New(cli cli.CLI, init cli.Init, streamServerAddr string, imageStore runtimeApi.ImageServiceServer) (runtimeApi.RuntimeServiceServer, error) {
 	runtime := &RktRuntime{
-		CLI:      cli,
-		Init:     init,
-		execShim: NewExecShim(cli),
+		CLI:        cli,
+		Init:       init,
+		execShim:   NewExecShim(cli),
+		imageStore: imageStore,
 	}
 
 	var err error
@@ -63,7 +65,8 @@ func New(cli cli.CLI, init cli.Init, streamServerAddr string) (runtimeApi.Runtim
 			glog.Fatalf("error serving execs: %v", err)
 		}
 	}()
-	return runtime, nil
+	err = runtime.initializeLoggingAppImage(context.TODO())
+	return runtime, err
 }
 
 func (r *RktRuntime) Version(ctx context.Context, req *runtimeApi.VersionRequest) (*runtimeApi.VersionResponse, error) {
@@ -108,14 +111,12 @@ func (r *RktRuntime) ContainerStatus(ctx context.Context, req *runtimeApi.Contai
 func (r *RktRuntime) getImageHash(image string) (string, error) {
 	var imageID string
 
-	// Get the image hash.
-	imageName := *req.Config.Image.Image
 	var err error
-	imageName, err = util.ApplyDefaultImageTag(imageName)
+	image, err = util.ApplyDefaultImageTag(image)
 	if err != nil {
-		return nil, fmt.Errorf("unable to apply image tag: %v", err)
+		return "", fmt.Errorf("unable to apply image tag: %v", err)
 	}
-	resp, err := r.RunCommand("image", "fetch", "--store-only=true", "--full=true", "docker://"+imageName)
+	resp, err := r.RunCommand("image", "fetch", "--store-only=true", "--full=true", "docker://"+image)
 	if err != nil {
 		return "", err
 	}

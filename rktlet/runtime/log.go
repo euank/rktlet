@@ -20,10 +20,24 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/net/context"
+
+	runtimeapi "k8s.io/kubernetes/pkg/kubelet/api/v1alpha1/runtime"
 )
 
 const loggingHelperImage = "quay.io/coreos/rktlet-journal2cri:0.0.1"
 const loggingAppName = "journal2cri-rktletinternal"
+
+func (r *RktRuntime) initializeLoggingAppImage(ctx context.Context) error {
+	imageName := loggingHelperImage
+	_, err := r.imageStore.PullImage(ctx, &runtimeapi.PullImageRequest{
+		Image: &runtimeapi.ImageSpec{
+			Image: &imageName,
+		},
+	})
+	return err
+}
 
 // addInternalLoggingApp adds the helper app for converting journald logs for this pod to cri logs
 func (r *RktRuntime) addInternalLoggingApp(rktUUID string, criLogDir string) error {
