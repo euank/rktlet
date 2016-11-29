@@ -29,7 +29,7 @@ import (
 )
 
 const loggingHelperImage = "quay.io/coreos/rktlet-journal2cri:0.0.1"
-const loggingAppName = "journal2cri-rktletinternal"
+const loggingAppName = internalAppPrefix + "journal2cri"
 
 func (r *RktRuntime) initializeLoggingAppImage(ctx context.Context) error {
 	imageName := loggingHelperImage
@@ -58,11 +58,11 @@ func (r *RktRuntime) addInternalLoggingApp(rktUUID string, criLogDir string) err
 		return err
 	}
 
-	rktJournalDir := filepath.Join("var", "log", "journal", strings.Replace(rktUUID, "-", "", -1))
+	rktJournalDir := filepath.Join("/", "var", "log", "journal", strings.Replace(rktUUID, "-", "", -1))
 
 	cmd := []string{"app", "add", rktUUID, imageHash}
 
-	cmd = append(cmd, "--name=journal2cri-"+loggingAppName)
+	cmd = append(cmd, "--name="+loggingAppName)
 	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=journal,kind=host,source=%s,target=/journal,readOnly=true", rktJournalDir))
 	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=cri,kind=host,source=%s,target=/cri,readOnly=false", criLogDir))
 

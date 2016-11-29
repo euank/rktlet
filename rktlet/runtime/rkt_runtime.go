@@ -1,4 +1,5 @@
 /*
+eonst nternal
 Copyright 2016 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +40,8 @@ type RktRuntime struct {
 	streamServer streaming.Server
 	imageStore   runtimeApi.ImageServiceServer
 }
+
+const internalAppPrefix = "rktletinternal-"
 
 // New creates a new RuntimeServiceServer backed by rkt
 func New(cli cli.CLI, init cli.Init, streamServerAddr string, imageStore runtimeApi.ImageServiceServer) (runtimeApi.RuntimeServiceServer, error) {
@@ -203,6 +206,9 @@ func (r *RktRuntime) ListContainers(ctx context.Context, req *runtimeApi.ListCon
 	var containers []*runtimeApi.Container
 	for _, p := range pods {
 		for _, appName := range p.AppNames {
+			if strings.HasPrefix(appName, internalAppPrefix) {
+				continue
+			}
 			containerID := buildContainerID(p.UUID, appName)
 			resp, err := r.ContainerStatus(ctx, &runtimeApi.ContainerStatusRequest{
 				ContainerId: &containerID,

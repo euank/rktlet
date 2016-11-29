@@ -40,16 +40,12 @@ const (
 )
 
 // List of reserved keys in the annotations.
-var kubernetesReservedAnnoKeys []string
-
-func init() {
-	kubernetesReservedAnnoKeys = []string{
-		kubernetesReservedAnnoImageNameKey,
-		kubernetesReservedAnnoPodUid,
-		kubernetesReservedAnnoPodName,
-		kubernetesReservedAnnoPodNamespace,
-		kubernetesReservedAnnoPodAttempt,
-	}
+var kubernetesReservedAnnoKeys = []string{
+	kubernetesReservedAnnoImageNameKey,
+	kubernetesReservedAnnoPodUid,
+	kubernetesReservedAnnoPodName,
+	kubernetesReservedAnnoPodNamespace,
+	kubernetesReservedAnnoPodAttempt,
 }
 
 // parseContainerID parses the container ID string into "uuid" + "appname".
@@ -356,7 +352,7 @@ func generateAppSandboxCommand(req *runtimeApi.RunPodSandboxRequest, uuidfile st
 	annotations = append(annotations, fmt.Sprintf("%s=%s", kubernetesReservedAnnoPodUid, *req.Config.Metadata.Uid))
 	annotations = append(annotations, fmt.Sprintf("%s=%s", kubernetesReservedAnnoPodName, *req.Config.Metadata.Name))
 	annotations = append(annotations, fmt.Sprintf("%s=%s", kubernetesReservedAnnoPodNamespace, *req.Config.Metadata.Namespace))
-	annotations = append(annotations, fmt.Sprintf("%s=%d", kubernetesReservedAnnoPodAttempt, *req.Config.Metadata.Attempt))
+	annotations = append(annotations, fmt.Sprintf("%s=%d", kubernetesReservedAnnoPodAttempt, req.GetConfig().GetMetadata().GetAttempt()))
 
 	for _, anno := range annotations {
 		cmd = append(cmd, "--user-annotation="+anno)
