@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/golang/glog"
+
 	"golang.org/x/net/context"
 
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/api/v1alpha1/runtime"
@@ -31,11 +33,17 @@ const loggingAppName = "journal2cri-rktletinternal"
 
 func (r *RktRuntime) initializeLoggingAppImage(ctx context.Context) error {
 	imageName := loggingHelperImage
-	_, err := r.imageStore.PullImage(ctx, &runtimeapi.PullImageRequest{
+	_, err := r.getImageHash(loggingHelperImage)
+	if err == nil {
+		return nil
+	}
+	glog.Infof("downloading %q logging helper, this may take some time", loggingHelperImage)
+	_, err = r.imageStore.PullImage(ctx, &runtimeapi.PullImageRequest{
 		Image: &runtimeapi.ImageSpec{
 			Image: &imageName,
 		},
 	})
+	glog.Infof("finished downloading logging helper image")
 	return err
 }
 
@@ -55,8 +63,8 @@ func (r *RktRuntime) addInternalLoggingApp(rktUUID string, criLogDir string) err
 	cmd := []string{"app", "add", rktUUID, imageHash}
 
 	cmd = append(cmd, "--name=journal2cri-"+loggingAppName)
-	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=journal,kind=host,source=%s,target=/journal,readOnly=true"), rktJournalDir)
-	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=cri,kind=host,source=%s,target=/cri,readOnly=false"), criLogDir)
+	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=journal,kind=host,source=%s,target=/journal,readOnly=true", rktJournalDir))
+	cmd = append(cmd, fmt.Sprintf("--mnt-volume=name=cri,kind=host,source=%s,target=/cri,readOnly=false", criLogDir))
 
 	if _, err := r.RunCommand(cmd[0], cmd[1:]...); err != nil {
 		return err
