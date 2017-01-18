@@ -107,6 +107,9 @@ func newLogOptions(apiOpts *v1.PodLogOptions, now time.Time) *logOptions {
 func ReadLogs(path string, apiOpts *v1.PodLogOptions, stdout, stderr io.Writer) error {
 	f, err := os.Open(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return fmt.Errorf("failed to open log file %q: %v", path, err)
 	}
 	defer f.Close()
